@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-import google.generativeai as genai
+from groq import Groq
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -14,12 +14,12 @@ st.set_page_config(
 # ── API key ───────────────────────────────────────────────────────────────────
 def get_api_key() -> str:
     try:
-        return st.secrets["GEMINI_API_KEY"]
+        return st.secrets["GROQ_API_KEY"]
     except Exception:
         load_dotenv()
-        return os.getenv("GEMINI_API_KEY", "")
+        return os.getenv("GROQ_API_KEY", "")
 
-GEMINI_API_KEY = get_api_key()
+GROQ_API_KEY = get_api_key()
 
 # ── Examples ──────────────────────────────────────────────────────────────────
 EXAMPLES = {
@@ -100,46 +100,57 @@ by your explanation content. Do not add any preamble, extra headings, or closing
 
 {headings_list}"""
 
-# ── Gemini call with retry / fallback ─────────────────────────────────────────
+# ── Groq call with retry / fallback ──────────────────────────────────────────
 def get_missing_headings(text: str) -> list:
     return [h for h in REQUIRED_HEADINGS if h not in text]
 
-def call_gemini(code: str, language: str, level: str) -> str:
-    if not GEMINI_API_KEY:
+def call_groq(code: str, language: str, level: str) -> str:
+    if not GROQ_API_KEY:
         return (
             "### Human Translation\n\n"
-            "⚠️ **No API key found.** Add `GEMINI_API_KEY` to your `.env` file or Streamlit secrets "
+            "⚠️ **No API key found.** Add `GROQ_API_KEY` to your `.env` file or Streamlit secrets "
             "and restart the app."
         )
 
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            system_instruction=(
-                "You are an expert programming teacher who explains code clearly and pedagogically. "
-                "Always respond using exactly the Markdown headings requested — no more, no less. "
-                "Never skip a heading."
-            ),
-        )
+    system_msg = (
+        "You are an expert programming teacher who explains code clearly and pedagogically. "
+        "Always respond using exactly the Markdown headings requested — no more, no less. "
+        "Never skip a heading."
+    )
 
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
         prompt = build_prompt(code, language, level)
 
+        def _call(messages):
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.3,
+            )
+            return response.choices[0].message.content
+
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": prompt},
+        ]
+
         # First attempt
-        response = model.generate_content(prompt)
-        text = response.text
+        text = _call(messages)
 
         # Check for missing headings — one automatic retry
         missing = get_missing_headings(text)
         if missing:
             missing_str = ", ".join(missing)
-            retry_prompt = (
-                prompt
-                + f"\n\nYour previous response was missing these required headings: {missing_str}.\n"
-                "Return the COMPLETE output again with ALL 6 headings present and in order."
-            )
-            response = model.generate_content(retry_prompt)
-            text = response.text
+            messages.append({"role": "assistant", "content": text})
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"You missed these required headings: {missing_str}. "
+                    "Return the COMPLETE output again with ALL 6 headings present and in order."
+                ),
+            })
+            text = _call(messages)
             missing = get_missing_headings(text)
 
         # Final fallback — wrap raw output so UI never breaks
@@ -255,7 +266,7 @@ if translate_btn:
         st.warning("Paste some code first, then click Translate.")
     else:
         with st.spinner("Translating your code..."):
-            output = call_gemini(code_input.strip(), selected_lang, level)
+            output = call_groq(code_input.strip(), selected_lang, level)
         st.session_state["last_output"] = output
         st.session_state["code_input"] = code_input
 
