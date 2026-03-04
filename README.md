@@ -212,9 +212,18 @@ CodeLingo/
 ├── app.py                  # Full Streamlit app — UI, streaming, quiz, share
 ├── requirements.txt        # streamlit, groq, python-dotenv
 ├── README.md
+├── LICENSE
 ├── .env                    # Local API key (gitignored)
 ├── .gitignore
 └── .streamlit/
     ├── config.toml         # Dark theme configuration
     └── secrets.toml        # Streamlit Cloud API key (gitignored)
 ```
+
+---
+
+## License
+
+MIT License © 2026 [ak23bar](https://github.com/ak23bar)
+
+See [LICENSE](LICENSE) for full terms. Free to use, modify, and distribute with attribution.
