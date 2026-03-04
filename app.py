@@ -38,21 +38,27 @@ SECTION_COLORS = {h: c for h, c, _ in SECTION_META}
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 CUSTOM_CSS = """
 <style>
-/* ── HIDE streamlit chrome, keep sidebar toggle ── */
+/* ── HIDE streamlit chrome ── */
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
-/* Hide deploy button and streamlit branding in header, but NOT the sidebar toggle */
-header [data-testid="stToolbar"] { visibility: hidden; }
-header [data-testid="stDecoration"] { display: none; }
-/* Ensure the collapsed sidebar arrow is always visible */
-[data-testid="collapsedControl"] {
-    visibility: visible !important;
-    display: flex !important;
-    opacity: 1 !important;
+
+/* ── Style header to match dark theme ── */
+[data-testid="stHeader"] {
+    background-color: #0F1117;
+    border-bottom: 1px solid #1E2130;
 }
-section[data-testid="stSidebarCollapsedControl"] {
-    visibility: visible !important;
-    display: flex !important;
+[data-testid="stDeployButton"] > button {
+    background: transparent;
+    border: 1px solid #2D3148;
+    color: #64748B;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    padding: 0.25rem 0.75rem;
+    transition: all 0.2s;
+}
+[data-testid="stDeployButton"] > button:hover {
+    border-color: #7C3AED;
+    color: #A78BFA;
 }
 
 /* ── Hero ── */
