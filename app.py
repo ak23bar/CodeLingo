@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import urllib.parse
 import streamlit as st
 from dotenv import load_dotenv
@@ -39,6 +40,10 @@ CUSTOM_CSS = """
 <style>
 /* ── HIDE streamlit chrome ── */
 #MainMenu, footer, header { visibility: hidden; }
+
+/* ── Keep sidebar toggle visible when collapsed ── */
+[data-testid="collapsedControl"] { visibility: visible !important; }
+button[kind="header"] { visibility: visible !important; }
 
 /* ── Hero ── */
 .hero-title {
@@ -190,8 +195,30 @@ LEVEL_MODIFIERS = {
 }
 
 # ── Prompt builder ────────────────────────────────────────────────────────────
+STEP_BY_STEP_INSTRUCTIONS = {
+    "Beginner": (
+        "For '### Step-by-Step Execution': Walk through EVERY line or logical step one at a time, "
+        "numbered (Step 1, Step 2, ...). For each step quote the line of code in a code block, "
+        "then explain in plain English what happens — no jargon, use real-world analogies. "
+        "Imagine the reader has never run code before."
+    ),
+    "Student": (
+        "For '### Step-by-Step Execution': Walk through EVERY line or logical step one at a time, "
+        "numbered (Step 1, Step 2, ...). For each step quote the line in a code block, "
+        "then explain what executes, what values change, and why. Use correct terminology "
+        "and note any important edge cases a student should be aware of."
+    ),
+    "Teacher": (
+        "For '### Step-by-Step Execution': Walk through EVERY line or logical step one at a time, "
+        "numbered (Step 1, Step 2, ...). For each step quote the line in a code block, "
+        "explain execution in detail including memory/state changes, then add a brief "
+        "'Teaching note:' on common student confusion points or how to frame this step in class."
+    ),
+}
+
 def build_prompt(code: str, language: str, level: str) -> str:
     modifier = LEVEL_MODIFIERS[level]
+    step_instruction = STEP_BY_STEP_INSTRUCTIONS[level]
     headings_list = "\n".join(REQUIRED_HEADINGS)
     return f"""A user has submitted the following {language} code:
 
@@ -201,6 +228,10 @@ def build_prompt(code: str, language: str, level: str) -> str:
 
 Explanation level: **{level}**
 {modifier}
+
+{step_instruction}
+
+For all other sections, match the same explanation level depth and vocabulary.
 
 Respond ONLY with these exact 6 Markdown headings in order, each immediately followed \
 by your explanation content. Do not add any preamble, extra headings, or closing remarks.
@@ -232,7 +263,10 @@ def stream_groq(code: str, language: str, level: str):
         stream=True,
     ) as stream:
         for chunk in stream:
-            yield chunk.choices[0].delta.content or ""
+            token = chunk.choices[0].delta.content or ""
+            if token:
+                yield token
+                time.sleep(0.03)
 
 # ── Quiz generator ────────────────────────────────────────────────────────────
 QUIZ_PROMPT = """Based on the following {language} code and its {level}-level explanation, \
