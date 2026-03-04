@@ -38,12 +38,22 @@ SECTION_COLORS = {h: c for h, c, _ in SECTION_META}
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 CUSTOM_CSS = """
 <style>
-/* ── HIDE streamlit chrome ── */
-#MainMenu, footer, header { visibility: hidden; }
-
-/* ── Keep sidebar toggle visible when collapsed ── */
-[data-testid="collapsedControl"] { visibility: visible !important; }
-button[kind="header"] { visibility: visible !important; }
+/* ── HIDE streamlit chrome, keep sidebar toggle ── */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+/* Hide deploy button and streamlit branding in header, but NOT the sidebar toggle */
+header [data-testid="stToolbar"] { visibility: hidden; }
+header [data-testid="stDecoration"] { display: none; }
+/* Ensure the collapsed sidebar arrow is always visible */
+[data-testid="collapsedControl"] {
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+}
+section[data-testid="stSidebarCollapsedControl"] {
+    visibility: visible !important;
+    display: flex !important;
+}
 
 /* ── Hero ── */
 .hero-title {
